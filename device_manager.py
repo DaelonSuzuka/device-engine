@@ -3,7 +3,7 @@ from serial.tools.list_ports import comports
 import time
 import logging
 from qt import *
-from bundles import SigBundle, SlotBundle
+from .bundles import SigBundle, SlotBundle
 
 
 # servitor-prime
