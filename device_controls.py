@@ -1,7 +1,18 @@
 from qt import *
 from devices import DeviceManager
-from serial_monitor import SerialMonitorWidget
-from command_palette import CommandPalette, Command
+
+try:
+    from serial_monitor import SerialMonitorWidget
+    serial_monitor_available = True
+except:
+    serial_monitor_available = False
+
+try:
+    from command_palette import CommandPalette, Command
+    command_palette_available = True
+except:
+    command_palette_available = False
+
 
 
 class DeviceTreeWidgetItem(QTreeWidgetItem):
@@ -89,7 +100,8 @@ class DeviceTree(QTreeWidget):
             if hasattr(item.device, 'locate'):
                 menu.addAction(QAction("Locate Device", self, triggered=item.device.locate))
 
-            menu.addAction(QAction("Open Serial Monitor", self, triggered=lambda: self.open_monitor(item)))
+            if serial_monitor_available:
+                menu.addAction(QAction("Open Serial Monitor", self, triggered=lambda: self.open_monitor(item)))
             menu.addAction(QAction("Remove", self, triggered=lambda: self.remove_clicked(item)))
             menu.exec_(pos)
 
@@ -104,11 +116,12 @@ class DeviceTree(QTreeWidget):
                 print('widget:', item.device.profile_name)
 
     def open_monitor(self, item):
-        monitor = SerialMonitorWidget()
-        monitor.setWindowTitle(item.device.title)
-        item.device.connect_monitor(monitor)
-        self.open_monitors[item.device.guid] = monitor
-        monitor.show()
+        if serial_monitor_available:
+            monitor = SerialMonitorWidget()
+            monitor.setWindowTitle(item.device.title)
+            item.device.connect_monitor(monitor)
+            self.open_monitors[item.device.guid] = monitor
+            monitor.show()
 
     def remove_clicked(self, item):
         if hasattr(item, 'device'):
@@ -130,10 +143,11 @@ class DeviceControlsDockWidget(QDockWidget):
 
         self.setWidget(DeviceControlsWidget(self))
 
-        self.commands = [
-            Command("Device List: Show device list", triggered=self.show, shortcut='Ctrl+D'),
-            Command("Device List: Hide device list", triggered=self.hide),
-        ]
+        if command_palette_available:
+            self.commands = [
+                Command("Device List: Show device list", triggered=self.show, shortcut='Ctrl+D'),
+                Command("Device List: Hide device list", triggered=self.hide),
+            ]
 
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetMovable)
