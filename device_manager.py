@@ -6,14 +6,6 @@ from qt import *
 from .bundles import SigBundle, SlotBundle
 
 
-# servitor-prime
-startup = [
-    'CalibrationTarget:/dev/ttyS4:115200',
-    # 'ConsoleDevice:/dev/ttyS4',
-    'ConsoleDevice:/dev/ttyS5',
-]
-
-
 class DeviceManager(QObject):
     signals = {
         'add_device':[SerialDevice],
@@ -108,7 +100,7 @@ class DeviceManager(QObject):
             return target
         return decorator
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, starting_devices=None, ignored_ports=None):
         super().__init__(parent=parent)
         self.log = logging.getLogger(__name__)
         self.log.info("Initializing DeviceManager...")
@@ -124,6 +116,9 @@ class DeviceManager(QObject):
         self.first_scan = True
         self.ports = []
         
+        self.starting_devices = starting_devices if starting_devices else []
+        self.ignored_ports = ignored_ports if ignored_ports else []
+
         self.scan_timer = QTimer()
         self.scan_timer.timeout.connect(lambda: self.scan())
         self.scan_timer.start(250)
@@ -175,30 +170,32 @@ class DeviceManager(QObject):
         self.devices[guid].close()
         self.devices.pop(guid)
 
+    def do_first_scan(self, new_ports):
+        for p in new_ports:
+            for string in self.starting_devices:
+                parts = string.split(':')
+                profile = parts[0]
+                port = parts[1]
+                baud = parts[2] if len(parts) == 3 else None
+
+                if p == port:
+                    if baud:
+                        self.on_add_device(profiles[profile](port=port, baud=baud))
+                    else:
+                        self.on_add_device(profiles[profile](port=port))
+                    self.ports.append(p)
+        self.first_scan = False
+
     def scan(self):
         self.check_for_new_subscribers()
 
         new_ports = [p.device for p in sorted(comports())]
-
+        
         if self.first_scan:
-            for p in new_ports:
-                for string in startup:
-                    parts = string.split(':')
-                    profile = parts[0]
-                    port = parts[1]
-                    baud = parts[2] if len(parts) == 3 else None
-
-                    if p == port:
-                        if baud:
-                            self.on_add_device(profiles[profile](port=port, baud=baud))
-                        else:
-                            self.on_add_device(profiles[profile](port=port))
-                        self.ports.append(p)
-            self.first_scan = False
+            self.do_first_scan(new_ports)
 
         for port in [p for p in new_ports if p not in self.ports]:
-            # dumb work around for program crashing on my desktop
-            if port not in ['COM1', 'COM3']:
+            if port not in self.ignored_ports:
                 self.log.debug(f"New device connected at ({port}), enumerating...")
                 device = UnknownDevice(port=port)
                 self.new_devices.append(device)
