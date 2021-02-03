@@ -4,101 +4,13 @@ import time
 import logging
 from qt import *
 from .bundles import SigBundle, SlotBundle
+from .subscriptions import SubscriptionManager
 
 
 class DeviceManager(QObject):
-    signals = {
-        'add_device':[SerialDevice],
-        'remove_device': [str]
-    }
-    slots = {
-        'device_added': [SerialDevice], 
-        'device_removed': [str],
-        'subscribed': [None],
-    }
-    new_subscribers = []
-
-    @classmethod
-    def subscribe(cls, target):
-        old_init = target.__init__
-
-        def get_added():
-            def on_device_added(self, device):
-                self.devices[device.guid] = device
-                if hasattr(self, 'device_added'):
-                    self.device_added(device)
-            return on_device_added
-
-        def get_removed():
-            def on_device_removed(self, guid):
-                if hasattr(self, 'device_removed'):
-                    self.device_removed(guid)
-                self.devices.pop(guid)
-            return on_device_removed
-
-        def new_init(obj, *args, **kwargs):
-            old_init(obj, *args, **kwargs)
-            
-            obj.signals = SigBundle(cls.signals)
-            obj.slots = SlotBundle(cls.slots)
-            obj.slots.link_to(obj)
-            
-            obj.devices = {}
-            
-            cls.new_subscribers.append(obj)
-
-        target.on_device_added = get_added()
-        target.on_device_removed = get_removed()
-
-        target.__init__ = new_init
-
-        return target
-
-    @classmethod
-    def subscribe_to(cls, device_name):
-
-        def get_added():
-            def on_device_added(self, device):
-                if device.profile_name == device_name:
-                    if self.device:
-                        return
-                    self.device = device
-                    self.setEnabled(True)
-                    if hasattr(self, 'connected'):
-                        self.connected(device)
-            return on_device_added
-
-        def get_removed():
-            def on_device_removed(self, guid):
-                if self.device is None or self.device.guid != guid:
-                    return
-                self.device = None
-                self.setEnabled(False)
-                if hasattr(self, 'disconnected'):
-                    self.disconnected(guid)
-            return on_device_removed
-
-        def decorator(target):
-            target.on_device_added = get_added()
-            target.on_device_removed = get_removed()
-
-            old_init = target.__init__
-
-            def new_init(obj, *args, **kwargs):
-                old_init(obj, *args, **kwargs)
-                
-                obj.slots = SlotBundle(cls.slots)
-                obj.slots.link_to(obj)
-
-                obj.device = None
-                obj.setEnabled(False)
-                
-                cls.new_subscribers.append(obj)
-
-            target.__init__ = new_init
-
-            return target
-        return decorator
+    # forward these method calls, for backwards compatibility
+    subscribe = SubscriptionManager.subscribe
+    subscribe_to = SubscriptionManager.subscribe_to
 
     def __init__(self, parent=None, starting_devices=None, ignored_ports=None):
         super().__init__(parent=parent)
@@ -109,12 +21,12 @@ class DeviceManager(QObject):
         self.slots = SlotBundle({'add_device':[SerialDevice], 'remove_device': [str]})
         self.slots.link_to(self)
 
-        self.subscribers = []
-
         self.devices = {}
         self.new_devices = []
         self.first_scan = True
         self.ports = []
+
+        self.sub_manager = SubscriptionManager(self)
         
         self.starting_devices = starting_devices if starting_devices else []
         self.ignored_ports = ignored_ports if ignored_ports else []
@@ -127,7 +39,7 @@ class DeviceManager(QObject):
         self.update_timer.timeout.connect(lambda: self.update())
         self.update_timer.start(1)
         
-        self.check_for_new_subscribers()
+        self.sub_manager.check_for_new_subscribers()
 
         UnknownDevice.register_autodetect_info(profiles)
 
@@ -136,30 +48,6 @@ class DeviceManager(QObject):
         self.update_timer.stop()
         for _, device in self.devices.items():
             device.close()
-
-    def check_for_new_subscribers(self):
-        for new_sub in self.new_subscribers:
-            if new_sub not in self.subscribers:
-                self.connect_subscriber(new_sub)
-                
-            self.new_subscribers.remove(new_sub)
-
-    def connect_subscriber(self, subscriber):
-        if hasattr(subscriber, 'slots'):
-            if hasattr(subscriber.slots, 'device_added') and hasattr(subscriber.slots, 'device_removed'):
-                self.signals.device_added.connect(subscriber.slots.device_added)
-                self.signals.device_removed.connect(subscriber.slots.device_removed)
-                
-                for device in self.devices:
-                    subscriber.slots.device_added(self.devices[device])
-        
-            if hasattr(subscriber.slots, 'subscribed'):
-                subscriber.slots.subscribed()
-
-        if hasattr(subscriber, 'signals'):
-            if hasattr(subscriber.signals, 'add_device') and hasattr(subscriber.signals, 'remove_device'):
-                subscriber.signals.add_device.connect(self.slots.add_device)
-                subscriber.signals.remove_device.connect(self.slots.remove_device)
 
     def on_add_device(self, device):
         self.devices[device.guid] = device
@@ -187,7 +75,7 @@ class DeviceManager(QObject):
         self.first_scan = False
 
     def scan(self):
-        self.check_for_new_subscribers()
+        self.sub_manager.check_for_new_subscribers()
 
         new_ports = [p.device for p in sorted(comports())]
         

@@ -21,4 +21,5 @@ profiles = {p.profile_name: p for p in SerialDevice.__subclasses__()}
 profile_names = sorted(profiles.keys())
 
 from .device_manager import DeviceManager
+from .subscriptions import SubscriptionManager
 from .device_controls import DeviceControlsWidget, DeviceControlsDockWidget
