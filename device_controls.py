@@ -203,20 +203,18 @@ class DeviceControlsWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        with CVBoxLayout(self) as layout:
-            self.tabs = layout.add(QTabWidget())
-
         tree = QWidget()
-        self.tabs.addTab(tree, 'Devices')
-        settings = QWidget()
-        self.tabs.addTab(settings, 'Settings')
-
         with CVBoxLayout(tree) as layout:
             layout.add(NewDeviceWidget(self))
             layout.add(DeviceTree(self))
 
+        settings = QWidget()
         with CVBoxLayout(settings) as layout:
             layout.add(DeviceManagerSettings(self))
+
+        tabs = {'Devices':tree, 'Settings':settings, }
+        with CVBoxLayout(self) as layout:
+            self.tabs = layout.add(PersistentTabWidget('device_control_tabs', tabs=tabs))
 
 
 class DeviceControlsDockWidget(QDockWidget):
