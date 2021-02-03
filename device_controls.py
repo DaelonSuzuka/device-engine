@@ -1,5 +1,6 @@
 from qt import *
-from devices import DeviceManager
+from devices import DeviceManager, profile_names, profiles
+from serial.tools.list_ports import comports
 
 try:
     from serial_monitor import SerialMonitorWidget
@@ -125,7 +126,40 @@ class DeviceTree(QTreeWidget):
 
     def remove_clicked(self, item):
         if hasattr(item, 'device'):
-            print('remove:', item.device.profile_name)
+            self.signals.remove_device.emit(item.device.guid)
+
+
+@DeviceManager.subscribe
+class DeviceControls(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.profile = QComboBox()
+        self.port = QComboBox()
+        self.add = QPushButton('add', clicked=self.add_pressed)
+
+        names = [p for p in profile_names if p != 'no profile']
+        self.profile.addItems(names)
+        ports = ["DummyPort", *[port.device for port in sorted(comports())]]
+        self.port.addItems(ports)
+
+        with CHBoxLayout(self, margins=(0,0,0,0)) as layout:
+            with layout.vbox(margins=(0,0,0,0)) as layout:
+                layout.add(QLabel('Profiles:'))
+                layout.add(QLabel('Ports:'))
+            with layout.vbox(margins=(0,0,0,0)) as layout:
+                with layout.hbox(margins=(0,0,0,0)) as layout:
+                    layout.add(self.profile, 1)
+                with layout.hbox(margins=(0,0,0,0)) as layout:
+                    layout.add(self.port, 1)
+                    layout.add(self.add)
+
+    def add_pressed(self):
+        profile = self.profile.currentText()
+        port = self.port.currentText()
+
+        device = profiles[profile](port)
+        self.signals.add_device.emit(device)
 
 
 class DeviceControlsWidget(QWidget):
@@ -133,6 +167,7 @@ class DeviceControlsWidget(QWidget):
         super().__init__(parent=parent)
 
         with CVBoxLayout(self) as layout:
+            layout.addWidget(DeviceControls(self))
             layout.addWidget(DeviceTree(self))
 
 
