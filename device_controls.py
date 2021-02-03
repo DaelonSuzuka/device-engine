@@ -129,30 +129,67 @@ class DeviceTree(QTreeWidget):
             self.signals.remove_device.emit(item.device.guid)
 
 
+class CustomListWidget(QWidget):
+    def __init__(self, title, items=None, parent=None):
+        super().__init__(parent)
+        self.title = QLabel(title)
+        self.list = QListWidget(self)
+        self.line = QLineEdit(self)
+        self.add = QPushButton('Add')
+
+        with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
+            with layout.hbox(margins=(0,0,0,0)) as layout:
+                layout.add(self.title)
+            with layout.hbox(margins=(0,0,0,0)) as layout:
+                layout.add(self.line)
+                layout.add(self.add)
+            layout.add(self.list)
+
+    def addItems(self, items):
+        self.list.addItems(items)
+
+
+class DeviceManagerSettings(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.dm = QApplication.instance().device_manager
+
+        self.starting_devices = CustomListWidget('Starting Devices:')
+        self.starting_devices.addItems(self.dm.starting_devices)
+        self.ignored_ports = CustomListWidget('Ignored Ports:')
+        self.ignored_ports.addItems(self.dm.ignored_ports)
+
+        with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
+            layout.add(self.ignored_ports)
+            layout.add(self.starting_devices)
+
+
 @DeviceManager.subscribe
-class DeviceControls(QWidget):
+class NewDeviceWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.profile = QComboBox()
         self.port = QComboBox()
-        self.add = QPushButton('add', clicked=self.add_pressed)
+        self.add = QPushButton('Add Device', clicked=self.add_pressed)
 
         names = [p for p in profile_names if p != 'no profile']
         self.profile.addItems(names)
         ports = ["DummyPort", *[port.device for port in sorted(comports())]]
         self.port.addItems(ports)
 
-        with CHBoxLayout(self, margins=(0,0,0,0)) as layout:
-            with layout.vbox(margins=(0,0,0,0)) as layout:
-                layout.add(QLabel('Profiles:'))
-                layout.add(QLabel('Ports:'))
-            with layout.vbox(margins=(0,0,0,0)) as layout:
-                with layout.hbox(margins=(0,0,0,0)) as layout:
-                    layout.add(self.profile, 1)
-                with layout.hbox(margins=(0,0,0,0)) as layout:
-                    layout.add(self.port, 1)
-                    layout.add(self.add)
+        with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
+            # layout.add(QLabel('Add a device:'))
+            with layout.hbox(margins=(0,0,0,0)) as layout:
+                with layout.vbox(margins=(0,0,0,0)) as layout:
+                    layout.add(QLabel('Profiles:'))
+                    layout.add(QLabel('Ports:'))
+                with layout.vbox(margins=(0,0,0,0)) as layout:
+                    with layout.hbox(margins=(0,0,0,0)) as layout:
+                        layout.add(self.profile, 1)
+                    with layout.hbox(margins=(0,0,0,0)) as layout:
+                        layout.add(self.port, 1)
+                        layout.add(self.add)
 
     def add_pressed(self):
         profile = self.profile.currentText()
@@ -167,13 +204,24 @@ class DeviceControlsWidget(QWidget):
         super().__init__(parent=parent)
 
         with CVBoxLayout(self) as layout:
-            layout.addWidget(DeviceControls(self))
-            layout.addWidget(DeviceTree(self))
+            self.tabs = layout.add(QTabWidget())
+
+        tree = QWidget()
+        self.tabs.addTab(tree, 'Devices')
+        settings = QWidget()
+        self.tabs.addTab(settings, 'Settings')
+
+        with CVBoxLayout(tree) as layout:
+            layout.add(NewDeviceWidget(self))
+            layout.add(DeviceTree(self))
+
+        with CVBoxLayout(settings) as layout:
+            layout.add(DeviceManagerSettings(self))
 
 
 class DeviceControlsDockWidget(QDockWidget):
     def __init__(self, parent=None):
-        super().__init__('Available Devices', parent=parent)
+        super().__init__('Device Controls', parent=parent)
         self.setObjectName('DeviceControls')
 
         self.setWidget(DeviceControlsWidget(self))
