@@ -15,7 +15,6 @@ except:
     command_palette_available = False
 
 
-
 class DeviceTreeWidgetItem(QTreeWidgetItem):
     def __init__(self, parent, device):
         super().__init__(parent)
@@ -152,6 +151,7 @@ class CustomListWidget(QWidget):
         pos = event.globalPos()
         item = self.list.itemAt(self.list.viewport().mapFromGlobal(pos))
         index = self.list.indexFromItem(item).row()
+
         menu = QMenu()
         menu.addAction(QAction('Remove', self, triggered=lambda: self.on_remove(index)))
         menu.exec_(pos)
@@ -185,11 +185,11 @@ class DeviceManagerSettings(QWidget):
 
         self.starting_devices = CustomListWidget('Starting Devices:')
         self.starting_devices.addItems(self.dm.starting_devices)
+        self.starting_devices.list_changed.connect(self.dm.set_starting_devices)
+
         self.ignored_ports = CustomListWidget('Ignored Ports:')
         self.ignored_ports.addItems(self.dm.ignored_ports)
-
-        self.starting_devices.list_changed.connect(lambda x: self.dm.set_starting_devices(x))
-        self.ignored_ports.list_changed.connect(lambda x: self.dm.set_ignored_ports(x))
+        self.ignored_ports.list_changed.connect(self.dm.set_ignored_ports)
 
         with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
             layout.add(self.ignored_ports)

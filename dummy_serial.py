@@ -15,6 +15,7 @@ class DummySerial:
             self.read_buffer += self.responder.respond(string.decode())
 
     def read(self, number=1):
+        # TODO: huge future performance issues
         result = ""
         for i in range(number):
             result += self.read_buffer[:1]

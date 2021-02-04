@@ -1,12 +1,13 @@
 from qt import *
 
+
 class RemoteSerial:
     def __init__(self, port=None, timeout=0):
         self.port = port
         self.read_buffer = ""
 
         self.socket = QWebSocket()
-        self.socket.textMessageReceived.connect(self.recieve)        
+        self.socket.textMessageReceived.connect(self._recieve)
         # self.socket.disconnected.connect(lambda: print("disconnected"))
 
         if self.port:
@@ -21,10 +22,11 @@ class RemoteSerial:
     def write(self, string):
         self.socket.sendTextMessage(string.decode())
 
-    def recieve(self, string):
+    def _recieve(self, string):
         self.read_buffer += string
 
     def read(self, number=1):
+        # TODO: huge future performance issues
         result = ""
         for i in range(number):
             result += self.read_buffer[:1]

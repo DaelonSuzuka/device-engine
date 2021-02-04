@@ -76,6 +76,7 @@ class SerialDeviceBase:
             self.ser = Serial(port=self.port, baudrate=self.baud, timeout=0, write_timeout=0)
             self.active = True
         except Exception as e:
+            # TODO: bad exception handling, it's not always a permission error
             self.log.exception("PermissionError" + str(e))
 
     def close(self):
