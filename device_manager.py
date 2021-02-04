@@ -12,7 +12,7 @@ class DeviceManager(QObject):
     subscribe = SubscriptionManager.subscribe
     subscribe_to = SubscriptionManager.subscribe_to
 
-    def __init__(self, parent=None, starting_devices=None, ignored_ports=None):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.log = logging.getLogger(__name__)
         self.log.info("Initializing DeviceManager...")
@@ -28,8 +28,8 @@ class DeviceManager(QObject):
 
         self.sub_manager = SubscriptionManager(self)
         
-        self.starting_devices = starting_devices if starting_devices else []
-        self.ignored_ports = ignored_ports if ignored_ports else []
+        self.starting_devices = QSettings().value('starting_devices', [])
+        self.ignored_ports = QSettings().value('ignored_ports', [])
 
         self.scan_timer = QTimer()
         self.scan_timer.timeout.connect(lambda: self.scan())
@@ -42,6 +42,14 @@ class DeviceManager(QObject):
         self.sub_manager.check_for_new_subscribers()
 
         UnknownDevice.register_autodetect_info(profiles)
+        
+    def set_starting_devices(self, devices):
+        self.starting_devices = devices
+        QSettings().setValue('starting_devices', devices)
+
+    def set_ignored_ports(self, ports):
+        self.ignored_ports = ports
+        QSettings().setValue('ignored_ports', ports)
 
     def close(self):
         self.scan_timer.stop()

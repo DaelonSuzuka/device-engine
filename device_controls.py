@@ -130,20 +130,49 @@ class DeviceTree(QTreeWidget):
 
 
 class CustomListWidget(QWidget):
-    def __init__(self, title, items=None, parent=None):
+    list_changed = Signal(list)
+
+    def __init__(self, title, parent=None):
         super().__init__(parent)
         self.title = QLabel(title)
-        self.list = QListWidget(self)
+        self.list = QListWidget()
         self.line = QLineEdit(self)
-        self.add = QPushButton('Add')
+        self.line.returnPressed.connect(self.on_add)
+        self.add = QPushButton('Add', clicked=self.on_add)
 
         with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
             with layout.hbox(margins=(0,0,0,0)) as layout:
                 layout.add(self.title)
             with layout.hbox(margins=(0,0,0,0)) as layout:
-                layout.add(self.line)
+                layout.add(self.line, 1)
                 layout.add(self.add)
             layout.add(self.list)
+
+    def contextMenuEvent(self, event: PySide2.QtGui.QContextMenuEvent) -> None:
+        pos = event.globalPos()
+        item = self.list.itemAt(self.list.viewport().mapFromGlobal(pos))
+        index = self.list.indexFromItem(item).row()
+        menu = QMenu()
+        menu.addAction(QAction('Remove', self, triggered=lambda: self.on_remove(index)))
+        menu.exec_(pos)
+
+    def on_remove(self, index):
+        self.list.takeItem(index)
+        self.on_change()
+
+    def on_add(self):
+        item = self.line.text()
+        self.line.clear()
+        self.list.addItem(item)
+        self.list.sortItems()
+        self.on_change()
+
+    def on_change(self):
+        new_items = []
+        for i in range(self.list.count()):
+            new_items.append(self.list.item(i).text())
+
+        self.list_changed.emit(new_items)
 
     def addItems(self, items):
         self.list.addItems(items)
@@ -158,6 +187,9 @@ class DeviceManagerSettings(QWidget):
         self.starting_devices.addItems(self.dm.starting_devices)
         self.ignored_ports = CustomListWidget('Ignored Ports:')
         self.ignored_ports.addItems(self.dm.ignored_ports)
+
+        self.starting_devices.list_changed.connect(lambda x: self.dm.set_starting_devices(x))
+        self.ignored_ports.list_changed.connect(lambda x: self.dm.set_ignored_ports(x))
 
         with CVBoxLayout(self, margins=(0,0,0,0)) as layout:
             layout.add(self.ignored_ports)
