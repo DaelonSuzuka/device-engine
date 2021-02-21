@@ -75,9 +75,8 @@ class SerialDeviceBase:
         try:
             self.ser = Serial(port=self.port, baudrate=self.baud, timeout=0, write_timeout=0)
             self.active = True
-        except Exception as e:
-            # TODO: bad exception handling, it's not always a permission error
-            self.log.exception("PermissionError" + str(e))
+        except SerialException:
+            self.log.info(f'Failed to open {self.port}.')
 
     def close(self):
         """ close the serial port and set the device to inactive """
