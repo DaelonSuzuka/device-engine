@@ -28,8 +28,15 @@ class DeviceManager(QObject):
 
         self.sub_manager = SubscriptionManager(self)
         
-        self.starting_devices = QSettings().value('starting_devices', [])
-        self.ignored_ports = QSettings().value('ignored_ports', [])
+        prev = QSettings().value('starting_devices', [])
+        if isinstance(prev, str):
+            prev = [prev]
+        self.starting_devices = prev
+
+        prev = QSettings().value('ignored_ports', [])
+        if isinstance(prev, str):
+            prev = [prev]
+        self.ignored_ports = prev
 
         self.scan_timer = QTimer()
         self.scan_timer.timeout.connect(lambda: self.scan())
