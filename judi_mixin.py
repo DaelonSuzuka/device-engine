@@ -13,10 +13,10 @@ class JudiStandardMixin:
         }
 
     def ping(self):
-        self.send('{"request":{"ping":"%s"}}' % (self.msg_count))
+        self.send({'request':'ping'})
 
     def handshake(self):
-        self.send('{"request":"device_info"}')
+        self.send({'request':'device_info'})
 
     def handshake_recieved(self, response):
         if 'product_name' in response:
@@ -32,4 +32,4 @@ class JudiStandardMixin:
             self.signals.handshake_recieved.emit(response)
 
     def locate(self):
-        self.send('{"command":"locate"}')
+        self.send({'command':'locate'})

@@ -51,6 +51,8 @@ class SerialDevice(SerialDeviceBase):
             self.baud = device.baud
             self.name = device.name
             self.guid = device.guid
+        
+        self.callbacks = {}
 
         super().__init__(port=self.port, baud=self.baud)
 
@@ -93,12 +95,27 @@ class SerialDevice(SerialDeviceBase):
                     if k in table.keys():
                         self.process_message(msg[k], table[k])
 
+    def send(self, message, callback=None):
+        if isinstance(message, dict):
+            message['message_id'] = self.msg_count
+            message = json.dumps(message)
+
+            if callback:
+                self.callbacks[self.msg_count] = callback
+
+        super().send(message)
+        self.msg_count += 1
+
     def recieve(self, string):
         super().recieve(string)
 
         try:
             msg = json.loads(string)
+
+            if 'message_id' in msg:
+                if msg['message_id'] in self.callbacks:
+                    self.callbacks[msg['message_id']](msg)
+
             self.process_message(msg, self.message_tree)
         except json.decoder.JSONDecodeError as e:
             self.log.warn("JSONDecodeError" + str(e))
-

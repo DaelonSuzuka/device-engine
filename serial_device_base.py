@@ -100,7 +100,6 @@ class SerialDeviceBase:
         self.log.debug(f"TX: {string}")
 
         self.queue.put(string)
-        self.msg_count += 1
 
     def recieve(self, string):
         """ do something when a complete string is captured in self.communicate() """
