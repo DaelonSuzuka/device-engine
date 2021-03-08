@@ -175,7 +175,8 @@ class CustomListWidget(QWidget):
         self.list_changed.emit(new_items)
 
     def addItems(self, items):
-        self.list.addItems(items)
+        if items:
+            self.list.addItems(items)
 
 
 class DeviceManagerSettings(QWidget):

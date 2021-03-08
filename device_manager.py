@@ -74,20 +74,21 @@ class DeviceManager(QObject):
         self.devices.pop(guid)
 
     def do_first_scan(self, new_ports):
-        for string in self.starting_devices:
-            parts = string.split(':')
-            profile = parts[0]
-            port = parts[1]
-            baud = parts[2] if len(parts) == 3 else None
-            if profile in profile_names:
-                if port in new_ports or port == 'DummyPort':
-                    if baud:
-                        self.on_add_device(profiles[profile](port=port, baud=baud))
-                    else:
-                        self.on_add_device(profiles[profile](port=port))
-                    if port != 'DummyPort':
-                        self.ports.append(port)
-        self.first_scan = False
+        if self.starting_devices:
+            for string in self.starting_devices:
+                parts = string.split(':')
+                profile = parts[0]
+                port = parts[1]
+                baud = parts[2] if len(parts) == 3 else None
+                if profile in profile_names:
+                    if port in new_ports or port == 'DummyPort':
+                        if baud:
+                            self.on_add_device(profiles[profile](port=port, baud=baud))
+                        else:
+                            self.on_add_device(profiles[profile](port=port))
+                        if port != 'DummyPort':
+                            self.ports.append(port)
+            self.first_scan = False
 
     def scan(self):
         self.sub_manager.check_for_new_subscribers()
