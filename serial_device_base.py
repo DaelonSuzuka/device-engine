@@ -6,6 +6,7 @@ from .dummy_serial import DummySerial
 from .remote_serial import RemoteSerial
 import logging
 from qt import *
+import time
 
 
 class Signals(QObject):
@@ -24,6 +25,9 @@ class SerialDeviceBase:
         self.queue = Queue()
         self.filter = JudiFilter()
         self.active = False
+
+        self.last_transmit_time = time.time()
+        self.transmit_rate_limit = 0.01
 
         self.ser = None
         self.baud = baud
@@ -75,8 +79,9 @@ class SerialDeviceBase:
         try:
             self.ser = Serial(port=self.port, baudrate=self.baud, timeout=0, write_timeout=0)
             self.active = True
-        except SerialException:
-            self.log.info(f'Failed to open {self.port}.')
+        except Exception as e:
+            # TODO: bad exception handling, it's not always a permission error
+            self.log.exception("PermissionError" + str(e))
 
     def close(self):
         """ close the serial port and set the device to inactive """
@@ -111,13 +116,14 @@ class SerialDeviceBase:
 
     def transmit_next_message(self):
         sent = False
-        try:
-            if not self.queue.empty():
-                self.ser.write(self.queue.get().encode())
-                sent = True
-        except SerialException as e:
-            self.log.exception(e)
-
+        if not self.queue.empty():
+            if time_since(self.last_transmit_time) > self.transmit_rate_limit:
+                try:
+                    self.ser.write(self.queue.get().encode())
+                    sent = True
+                except SerialException as e:
+                    self.log.exception(e)
+                self.last_transmit_time = time.time()
         return sent
 
     def communicate(self):
