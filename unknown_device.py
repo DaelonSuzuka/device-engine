@@ -16,7 +16,7 @@ class DeviceStates(Enum):
 class UnknownDevice(JudiStandardMixin, SerialDevice):
     profile_name = "no profile"
 
-    _bauds = [9600, 19200, 38400, 115200, 230400, 460800]
+    _bauds = [9600, 19200, 38400, 115200, 230400, 460800, 1000000]
     handshake_table = {b:{} for b in _bauds}
     checker_table = {b:[] for b in _bauds}
 

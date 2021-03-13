@@ -102,6 +102,7 @@ class DeviceTree(QTreeWidget):
 
             if serial_monitor_available:
                 menu.addAction(QAction("Open Serial Monitor", self, triggered=lambda: self.open_monitor(item)))
+                menu.addAction(QAction("Open Serial Port", self, triggered=lambda: self.open_serial_port(item)))
             menu.addAction(QAction("Remove", self, triggered=lambda: self.remove_clicked(item)))
             menu.exec_(pos)
 
@@ -120,6 +121,14 @@ class DeviceTree(QTreeWidget):
             monitor = SerialMonitorWidget()
             monitor.setWindowTitle(item.device.title)
             item.device.connect_monitor(monitor)
+            self.open_monitors[item.device.guid] = monitor
+            monitor.show()
+
+    def open_serial_port(self, item):
+        if serial_monitor_available:
+            monitor = SerialMonitorWidget()
+            monitor.setWindowTitle(item.device.title)
+            item.device.connect_serial_port_monitor(monitor)
             self.open_monitors[item.device.guid] = monitor
             monitor.show()
 
