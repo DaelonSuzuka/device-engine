@@ -135,7 +135,7 @@ class SerialDeviceBase:
         # serial recieve
         try:
             while self.ser.in_waiting:
-                if self.filter.insert_char(self.ser.read(1).decode()):
+                if self.filter.insert_char(self.ser.read(1).decode(errors='ignore')):
                     break
         except Exception as e:
             name = ''
