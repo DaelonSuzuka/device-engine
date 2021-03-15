@@ -11,6 +11,7 @@ import time
 
 class Signals(QObject):
     send = Signal(str)
+    rejected = Signal(str)
 
 
 class SerialDeviceBase:
@@ -23,7 +24,7 @@ class SerialDeviceBase:
         self.base_signals = Signals()
 
         self.queue = Queue()
-        self.filter = JudiFilter()
+        self.filter = JudiFilter(self.base_signals.rejected.emit)
         self.active = False
 
         self.last_transmit_time = time.time()
@@ -62,6 +63,11 @@ class SerialDeviceBase:
     def connect_monitor(self, monitor):
         monitor.tx.connect(self.send)
         self.base_signals.send.connect(monitor.rx)
+        self.base_signals.rejected.connect(monitor.rx)
+
+    def connect_serial_port_monitor(self, monitor):
+        monitor.tx.connect(self.send)
+        self.base_signals.rejected.connect(monitor.rx)
 
     def open(self):
         """ open the serial port and set the device to active """

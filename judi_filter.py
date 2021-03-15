@@ -1,7 +1,8 @@
 class JudiFilter:
-    def __init__(self):
+    def __init__(self, rejected=None):
         self.buffer = ""
         self.depth = 0
+        self.rejected = rejected
 
     def reset(self):
         self.buffer = ""
@@ -14,6 +15,10 @@ class JudiFilter:
             self.buffer += c
         if c == "}" and self.depth > 0:
             self.depth -= 1
+
+        if len(self.buffer) == 0:
+            if self.rejected:
+                self.rejected(c)
 
         return self.completed()
 

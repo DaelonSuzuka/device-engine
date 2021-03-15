@@ -95,6 +95,9 @@ class SerialDevice(SerialDeviceBase):
                     if k in table.keys():
                         self.process_message(msg[k], table[k])
 
+    def route_message(self, msg):
+        pass
+
     def send(self, message, callback=None):
         if isinstance(message, dict):
             message['message_id'] = self.msg_count
@@ -117,5 +120,7 @@ class SerialDevice(SerialDeviceBase):
                     self.callbacks[msg['message_id']](msg)
 
             self.process_message(msg, self.message_tree)
+            self.route_message(msg)
+
         except json.decoder.JSONDecodeError as e:
             self.log.warn("JSONDecodeError" + str(e))
